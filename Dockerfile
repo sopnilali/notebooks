@@ -19,7 +19,7 @@ RUN npm run build
 # ---------------------------------------------------------------
 # Stage 2: PHP runtime (Apache)
 # ---------------------------------------------------------------
-FROM php:8.3-apache
+FROM php:8.4-apache
 
 # System dependencies + PHP extensions
 ENV DEBIAN_FRONTEND=noninteractive
