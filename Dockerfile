@@ -22,6 +22,8 @@ RUN npm run build
 FROM php:8.3-apache
 
 # System dependencies + PHP extensions
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y \
         git \
         curl \
@@ -29,6 +31,7 @@ RUN apt-get update && apt-get install -y \
         libonig-dev \
         libxml2-dev \
         libzip-dev \
+        libpq-dev \
         unzip \
         zip \
     && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
