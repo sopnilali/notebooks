@@ -40,9 +40,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
 # PHP dependencies
 COPY composer.json composer.lock* ./
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --no-platform-check
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
 
 # Application code
 COPY . .
