@@ -42,12 +42,11 @@ WORKDIR /var/www/html
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# PHP dependencies
-COPY composer.json composer.lock* ./
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
-
-# Application code
+# Copy application code first (needed for artisan during composer post-autoload-dump)
 COPY . .
+
+# PHP dependencies (runs after code copy so artisan exists)
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
 
 # Built frontend assets
 COPY --from=frontend /app/public/build ./public/build
