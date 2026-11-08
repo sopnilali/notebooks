@@ -82,7 +82,7 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
 
 # Serve static assets with caching
-RUN sed -i 's|</VirtualHost>|    <Location /build/>\n        ExpiresActive On\n        ExpiresDefault "access plus 1 year"\n        Header set Cache-Control "public, max-age=31536000, immutable"\n    </Location>\n</VirtualHost>|' /etc/apache2/sites-available/000-default.conf
+RUN sed -i 's|</VirtualHost>|    <Location /build/>\n        Header set Cache-Control "public, max-age=31536000, immutable"\n    </Location>\n</VirtualHost>|' /etc/apache2/sites-available/000-default.conf
 
 # Vercel provides PORT env var
 ENV PORT=8080
