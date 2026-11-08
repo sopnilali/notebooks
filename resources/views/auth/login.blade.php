@@ -68,13 +68,37 @@
             </a>
         </p>
 
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white/60 p-4 text-sm text-gray-600">
-            <p class="font-medium text-gray-900">Demo accounts</p>
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white/60 p-4">
+            <p class="font-medium text-gray-900 mb-3">Demo accounts</p>
 
-            <ul class="mt-2 space-y-1">
-                <li>Admin: <code class="text-gray-900">admin@example.com</code> / <code class="text-gray-900">password</code></li>
-                <li>User: <code class="text-gray-900">user@example.com</code> / <code class="text-gray-900">password</code></li>
-            </ul>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    onclick="fillDemo('admin@example.com', 'password')"
+                    class="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                    Login as Admin
+                </button>
+
+                <button
+                    type="button"
+                    onclick="fillDemo('user@example.com', 'password')"
+                    class="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                    Login as User
+                </button>
+            </div>
+
+            <p class="mt-3 text-xs text-gray-500">
+                Admin: admin@example.com / password &nbsp;|&nbsp; User: user@example.com / password
+            </p>
         </div>
     </section>
+
+    <script>
+        function fillDemo(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+        }
+    </script>
 </x-MainLayout.layout>
