@@ -10,7 +10,6 @@ fi
 
 # -----------------------------------------------------------------
 # 2. Override .env values from Docker/Vercel environment variables
-#    (set these in Vercel Dashboard → Settings → Environment Variables)
 # -----------------------------------------------------------------
 if [ -n "$APP_KEY" ]; then
     sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
@@ -76,25 +75,31 @@ if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
 fi
 
 # -----------------------------------------------------------------
-# 4. Configure Apache to listen on Vercel's PORT
+# 4. Fix file permissions (runtime-safe)
+# -----------------------------------------------------------------
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public 2>/dev/null || true
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public 2>/dev/null || true
+
+# -----------------------------------------------------------------
+# 5. Configure Apache to listen on Vercel's PORT
 # -----------------------------------------------------------------
 PORT=${PORT:-8080}
 sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
 # -----------------------------------------------------------------
-# 5. Cache config, routes, views for production
+# 6. Cache config, routes, views for production (non-fatal)
 # -----------------------------------------------------------------
 php artisan config:cache 2>/dev/null || true
 php artisan route:cache 2>/dev/null || true
 php artisan view:cache 2>/dev/null || true
 
 # -----------------------------------------------------------------
-# 6. Run migrations
+# 7. Run migrations (non-fatal — app should still start if DB isn't ready)
 # -----------------------------------------------------------------
 php artisan migrate --force 2>/dev/null || true
 
 # -----------------------------------------------------------------
-# 7. Start Apache
+# 8. Start Apache
 # -----------------------------------------------------------------
 exec apache2-foreground

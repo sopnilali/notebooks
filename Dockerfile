@@ -48,6 +48,11 @@ COPY . .
 # PHP dependencies (skip scripts during build; artisan may not be fully bootstrapped yet)
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs --no-scripts
 
+# Configure Apache DocumentRoot to Laravel public directory
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's|<Directory /var/www/html>|<Directory /var/www/html/public>|' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's|AllowOverride None|AllowOverride All|' /etc/apache2/sites-available/000-default.conf
+
 # Built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
@@ -55,9 +60,9 @@ COPY --from=frontend /app/public/build ./public/build
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Storage + cache permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Storage + cache + bootstrap permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
 
 # Vercel provides PORT env var
 ENV PORT=8080
