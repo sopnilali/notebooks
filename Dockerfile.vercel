@@ -1,5 +1,5 @@
-# Docker.vercel — Laravel container image for Vercel deployment
-# Build: docker build -f Docker.vercel -t portfolio .
+# Dockerfile.vercel — Laravel container image for Vercel deployment
+# Build: docker build -f Dockerfile.vercel -t portfolio .
 
 # ---------------------------------------------------------------
 # Stage 1: Frontend build (Vite + Tailwind v4)
