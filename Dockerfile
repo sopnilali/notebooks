@@ -45,8 +45,8 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 # Copy application code first (needed for artisan during composer post-autoload-dump)
 COPY . .
 
-# PHP dependencies (runs after code copy so artisan exists)
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
+# PHP dependencies (skip scripts during build; artisan may not be fully bootstrapped yet)
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs --no-scripts
 
 # Built frontend assets
 COPY --from=frontend /app/public/build ./public/build
