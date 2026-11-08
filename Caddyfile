@@ -1,0 +1,50 @@
+# Caddyfile — Laravel portfolio (Wadud)
+# Local development / alternative web server
+#
+# Run:
+#   caddy run
+#
+# Visit: http://localhost:8080
+
+{
+    admin localhost:2019
+    log {
+        output stdout
+        format console
+    }
+}
+
+localhost:8080 {
+    root * /var/www/html/public
+
+    php_fastcgi localhost:9000
+
+    file_server
+
+    # Laravel pretty URLs — try index.php for non-existent files
+    try_files {path} {path}/ /index.php?{query}
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-XSS-Protection "1; mode=block"
+    }
+
+    # Cache static assets for one year
+    @static {
+        path /build/*
+        path /storage/app/public/*
+    }
+    header /static Cache-Control "public, max-age=31536000, immutable"
+
+    # Deny access to sensitive files
+    @sensitive {
+        path /vendor/*
+        path /.env*
+        path /storage/logs/*
+        path /bootstrap/cache/*
+    }
+    respond @sensitive 404
+}
