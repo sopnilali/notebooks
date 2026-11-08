@@ -1,116 +1,100 @@
 #!/bin/bash
 set -e
 
+echo "=== Laravel Vercel Entrypoint ==="
+
 # -----------------------------------------------------------------
 # 1. Create .env from .env.example if missing
 # -----------------------------------------------------------------
 if [ ! -f .env ]; then
+    echo "Creating .env from .env.example..."
     cp .env.example .env
 fi
 
 # -----------------------------------------------------------------
 # 2. Override .env values from Docker/Vercel environment variables
 # -----------------------------------------------------------------
-if [ -n "$APP_KEY" ]; then
-    sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
-fi
+set_env() {
+    local key="$1"
+    local value="${!key}"
+    if [ -n "$value" ]; then
+        echo "Setting $key..."
+        sed -i "s|^${key}=.*|${key}=${value}|" .env
+    fi
+}
 
-if [ -n "$APP_URL" ]; then
-    sed -i "s|^APP_URL=.*|APP_URL=${APP_URL}|" .env
-fi
-
-if [ -n "$APP_ENV" ]; then
-    sed -i "s|^APP_ENV=.*|APP_ENV=${APP_ENV}|" .env
-fi
-
-if [ -n "$APP_DEBUG" ]; then
-    sed -i "s|^APP_DEBUG=.*|APP_DEBUG=${APP_DEBUG}|" .env
-fi
-
-if [ -n "$DB_CONNECTION" ]; then
-    sed -i "s|^DB_CONNECTION=.*|DB_CONNECTION=${DB_CONNECTION}|" .env
-fi
-
-if [ -n "$DB_HOST" ]; then
-    sed -i "s|^DB_HOST=.*|DB_HOST=${DB_HOST}|" .env
-fi
-
-if [ -n "$DB_PORT" ]; then
-    sed -i "s|^DB_PORT=.*|DB_PORT=${DB_PORT}|" .env
-fi
-
-if [ -n "$DB_DATABASE" ]; then
-    sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${DB_DATABASE}|" .env
-fi
-
-if [ -n "$DB_USERNAME" ]; then
-    sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${DB_USERNAME}|" .env
-fi
-
-if [ -n "$DB_PASSWORD" ]; then
-    sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" .env
-fi
-
-if [ -n "$SESSION_DRIVER" ]; then
-    sed -i "s|^SESSION_DRIVER=.*|SESSION_DRIVER=${SESSION_DRIVER}|" .env
-fi
-
-if [ -n "$CACHE_STORE" ]; then
-    sed -i "s|^CACHE_STORE=.*|CACHE_STORE=${CACHE_STORE}|" .env
-fi
-
-if [ -n "$QUEUE_CONNECTION" ]; then
-    sed -i "s|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=${QUEUE_CONNECTION}|" .env
-fi
-
-if [ -n "$LOG_CHANNEL" ]; then
-    sed -i "s|^LOG_CHANNEL=.*|LOG_CHANNEL=${LOG_CHANNEL}|" .env
-fi
+set_env APP_KEY
+set_env APP_URL
+set_env APP_ENV
+set_env APP_DEBUG
+set_env DB_CONNECTION
+set_env DB_HOST
+set_env DB_PORT
+set_env DB_DATABASE
+set_env DB_USERNAME
+set_env DB_PASSWORD
+set_env SESSION_DRIVER
+set_env CACHE_STORE
+set_env QUEUE_CONNECTION
+set_env LOG_CHANNEL
 
 # -----------------------------------------------------------------
-# 3. Verify PHP version (Laravel 13 requires PHP 8.3+)
-# -----------------------------------------------------------------
-php -v
-
-# -----------------------------------------------------------------
-# 4. Generate APP_KEY if still not provided
+# 3. Generate APP_KEY if still not provided
 # -----------------------------------------------------------------
 if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
+    echo "Generating APP_KEY..."
     php artisan key:generate --force
 fi
 
+echo "APP_KEY status:"
+grep "^APP_KEY=" .env
+
 # -----------------------------------------------------------------
-# 5. Fix file permissions (runtime-safe)
+# 4. Fix file permissions (runtime-safe)
 # -----------------------------------------------------------------
+echo "Fixing permissions..."
+mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public 2>/dev/null || true
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public 2>/dev/null || true
 
 # -----------------------------------------------------------------
-# 6. Clear opcache and regenerate autoloader
+# 5. Clear stale caches (important when env vars change)
 # -----------------------------------------------------------------
+echo "Clearing caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
 php -r "opcache_reset();" 2>/dev/null || true
-composer dump-autoload --no-dev --optimize 2>/dev/null || true
 
 # -----------------------------------------------------------------
-# 7. Configure Apache to listen on Vercel's PORT
+# 6. Configure Apache to listen on Vercel's PORT
 # -----------------------------------------------------------------
 PORT=${PORT:-8080}
 sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
 # -----------------------------------------------------------------
-# 8. Cache config, routes, views for production (non-fatal)
+# 7. Cache config, routes, views for production
 # -----------------------------------------------------------------
-php artisan config:cache 2>/dev/null || true
-php artisan route:cache 2>/dev/null || true
-php artisan view:cache 2>/dev/null || true
+echo "Caching config..."
+php artisan config:cache 2>/dev/null || echo "config:cache failed"
+php artisan route:cache 2>/dev/null || echo "route:cache failed"
+php artisan view:cache 2>/dev/null || echo "view:cache failed"
 
 # -----------------------------------------------------------------
-# 9. Run migrations (non-fatal — app should still start if DB isn't ready)
+# 8. Run migrations
 # -----------------------------------------------------------------
-php artisan migrate --force 2>/dev/null || true
+echo "Running migrations..."
+php artisan migrate --force 2>/dev/null || echo "migrate failed"
+
+# -----------------------------------------------------------------
+# 9. Regenerate autoloader
+# -----------------------------------------------------------------
+composer dump-autoload --no-dev --optimize 2>/dev/null || true
 
 # -----------------------------------------------------------------
 # 10. Start Apache
 # -----------------------------------------------------------------
+echo "=== Starting Apache on port ${PORT} ==="
 exec apache2-foreground
