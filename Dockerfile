@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y \
         zip \
     && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
     && docker-php-ext-enable opcache \
-    && a2enmod rewrite \
+    && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
 # Production opcache config
@@ -70,6 +70,9 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
 # Built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
+# Ensure no dev-server hot file exists (prevents @vite from pointing to dev server)
+RUN rm -f /var/www/html/public/build/hot /var/www/html/public/hot 2>/dev/null || true
+
 # Entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
@@ -77,6 +80,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Storage + cache + bootstrap permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
+
+# Serve static assets with caching
+RUN sed -i 's|</VirtualHost>|    <Location /build/>\n        ExpiresActive On\n        ExpiresDefault "access plus 1 year"\n        Header set Cache-Control "public, max-age=31536000, immutable"\n    </Location>\n</VirtualHost>|' /etc/apache2/sites-available/000-default.conf
 
 # Vercel provides PORT env var
 ENV PORT=8080
