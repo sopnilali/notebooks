@@ -1,5 +1,5 @@
-# Dockerfile.vercel — Laravel container image for Vercel deployment
-# Build: docker build -f Dockerfile.vercel -t portfolio .
+# Dockerfile — Laravel on Vercel (Docker deployment)
+# Multi-stage: Node.js builds frontend, PHP+Apache serves the app
 
 # ---------------------------------------------------------------
 # Stage 1: Frontend build (Vite + Tailwind v4)
@@ -8,7 +8,7 @@ FROM node:20-alpine AS frontend
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install --ignore-scripts
+RUN npm ci --ignore-scripts
 
 COPY vite.config.js ./
 COPY resources/css ./resources/css
@@ -21,6 +21,7 @@ RUN npm run build
 # ---------------------------------------------------------------
 FROM php:8.3-apache
 
+# System dependencies + PHP extensions
 RUN apt-get update && apt-get install -y \
         git \
         curl \
@@ -49,15 +50,15 @@ COPY . .
 # Built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
-# Entrypoint
+# Entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Permissions
+# Storage + cache permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Vercel provides PORT env var; Apache default is 80
+# Vercel provides PORT env var
 ENV PORT=8080
 
 EXPOSE ${PORT}
