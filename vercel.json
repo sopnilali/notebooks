@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "framework": null,
+  "buildCommand": "composer install --no-interaction --prefer-dist --optimize-autoloader && npm install --ignore-scripts && npm run build",
+  "devCommand": "php artisan serve",
+  "installCommand": "composer install --no-interaction --prefer-dist --optimize-autoloader",
+  "routes": [
+    {
+      "src": "/build/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/public/build/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
+  ],
+  "env": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false",
+    "LOG_CHANNEL": "errorlog",
+    "SESSION_DRIVER": "database",
+    "CACHE_STORE": "array",
+    "QUEUE_CONNECTION": "sync"
+  }
+}
